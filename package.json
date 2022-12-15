@@ -84,7 +84,7 @@
 						"php": "php $dir$fileName",
 						"go": "go run $dir$fileName",
 						"dart": "dart $dir$fileName",
-						"haskell": "runhaskell $dir$fileName",
+						"haskell": "runghc $dir$fileName",
 						"rust": "cd $dir && rustc $fileName && $fileNameWithoutExt",
 						"java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
 						"c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && $fileNameWithoutExt",
