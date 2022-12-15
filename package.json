@@ -1,0 +1,243 @@
+{
+	"name": "vsc-code-runner",
+	"version": "1.0.0",
+	"displayName": "Code runner for Visual Studio Code",
+	"description": "Run Python, Ruby, TypeScript, JavaScript, PHP, Go, Dart, Haskell, Rust, Java, C, C++, C#, Kotlin, PowerShell, Batch files, etc.",
+	"publisher": "ValCubeta",
+	"icon": null,
+	"categories": [
+		"Programming Languages",
+		"Other"
+	],
+	"engines": {
+		"vscode": "^1.56.0"
+	},
+	"activationEvents": [
+		"onCommand:vsc-code-runner.run",
+		"onStartupFinished"
+	],
+	"main": "./index.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "vsc-code-runner.run",
+				"title": "Run Code",
+				"icon": "$(play)"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "vsc-code-runner.run",
+				"key": "Ctrl+Alt+N"
+			},
+			{
+				"command": "vsc-code-runner.stop",
+				"key": "Ctrl+Alt+M"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"when": "!inOutput && config.vsc-code-runner.showRunCommand",
+					"command": "vsc-code-runner.run",
+					"group": "navigation"
+				},
+				{
+					"when": "inOutput && !config.vsc-code-runner.runInTerminal",
+					"command": "vsc-code-runner.stop",
+					"group": "stop-code-run"
+				}
+			],
+			"editor/title/run": [
+				{
+					"when": "config.code-runner.showRunIcon",
+					"command": "vsc-code-runner.run",
+					"group": "navigation"
+				}
+			],
+			"editor/title": [
+				{
+					"when": "config.vsc-code-runner.showStopIcon && vsc-code-runner.codeRunning",
+					"command": "vsc-code-runner.stop",
+					"group": "navigation"
+				}
+			],
+			"explorer/context": [
+				{
+					"when": "!explorerResourceIsFolder && config.vsc-code-runner.showRunCommand",
+					"command": "vsc-code-runner.run",
+					"group": "navigation"
+				}
+			]
+		},
+		"configuration": {
+			"type": "object",
+			"title": "VSC code runner configuration",
+			"properties": {
+				"vsc-code-runner.executors": {
+					"type": "object",
+					"default": {
+						"python": "python $dir$fileName",
+						"ruby": "ruby $dir$fileName",
+						"typescript": "ts-node $dir$fileName",
+						"javascript": "node $dir$fileName",
+						"php": "php $dir$fileName",
+						"go": "go run $dir$fileName",
+						"dart": "dart $dir$fileName",
+						"haskell": "runhaskell $dir$fileName",
+						"rust": "cd $dir && rustc $fileName && $fileNameWithoutExt",
+						"java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
+						"c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && $fileNameWithoutExt",
+						"cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt && $fileNameWithoutExt",
+						"csharp": "scriptcs $dir$fileName",
+						"kotlin": "cd $dir && kotlinc $fileName -d $fileName.jar && java $fileName.jar",
+						"powershell": "powershell -ExecutionPolicy ByPass -File $dir$fileName",
+						"bat": "cmd /c $dir$fileName",
+						"coffeescript": "coffee $dir$fileName",
+						"swift": "swift $dir$fileName"
+					},
+					"description": "Set the executor of each language using its language id",
+					"scope": "resource"
+				},
+				"vsc-code-runner.executorsByExtension": {
+					"type": "object",
+					"default": {
+						".js": "node $dir$fileName",
+						".java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
+						".c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && $fileNameWithoutExt",
+						".cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt && $fileNameWithoutExt",
+						".php": "php $dir$fileName",
+						".py": "python $dir$fileName",
+						".rb": "ruby $dir$fileName",
+						".go": "go run $dir$fileName",
+						".ps1": "powershell -ExecutionPolicy ByPass -File $dir$fileName",
+						".bat": "cmd /c $dir$fileName",
+						".cs": "scriptcs $dir$fileName",
+						".ts": "ts-node $dir$fileName",
+						".coffee": "coffee $dir$fileName",
+						".swift": "swift $dir$fileName",
+						".rs": "cd $dir && rustc $fileName && $fileNameWithoutExt",
+						".dart": "dart $dir$fileName"
+					},
+					"description": "Set the executor of each file by its extension",
+					"scope": "resource"
+				},
+				"vsc-code-runner.customLanguageExtensions": {
+					"type": "object",
+					"default": {
+						"ruby": ".ruby"
+					},
+					"description": "Add extensions for any language using its language id",
+					"scope": "resource"
+				},
+				"vsc-code-runner.defaultLanguage": {
+					"type": "string",
+					"default": "",
+					"description": "Set the default language to run",
+					"scope": "resource"
+				},
+				"vsc-code-runner.clearPreviousOutput": {
+					"type": "boolean",
+					"default": false,
+					"description": "Whether to clear previous output before each run",
+					"scope": "resource"
+				},
+				"vsc-code-runner.saveFileBeforeRun": {
+					"type": "boolean",
+					"default": false,
+					"description": "Whether to save the current file before running",
+					"scope": "resource"
+				},
+				"vsc-code-runner.showExecutionMessage": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to show the execution message",
+					"scope": "resource"
+				},
+				"vsc-code-runner.preserveFocus": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to preserve focus on code editor after running the code",
+					"scope": "resource"
+				},
+				"vsc-code-runner.ignoreSelection": {
+					"type": "boolean",
+					"default": false,
+					"description": "Whether to ignore selection to always run entire file",
+					"scope": "resource"
+				},
+				"vsc-code-runner.showRunIcon": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to show the 'Run' icon in editor title menu",
+					"scope": "resource"
+				},
+				"vsc-code-runner.showStopIcon": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to show 'Stop' icon in the editor title menu when code is running",
+					"scope": "resource"
+				},
+				"vsc-code-runner.temporaryFileName": {
+					"type": "string",
+					"default": "",
+					"description": "Temporary file name used in running selected code snippet. When it is set as empty, the file name will be 'tmp' + date + extension (like tmp1671121986692.python). You can also use variables like $date or $extension",
+					"scope": "resource"
+				}
+			}
+		},
+		"languages": [
+			{
+				"id": "vsc-code-runner-output",
+				"mimetypes": [
+					"text/x-code-output"
+				]
+			}
+		],
+		"grammars": [
+			{
+				"language": "vsc-code-runner-output",
+				"scopeName": "vsc-code-runner.output",
+				"path": "./vsc-code-runner-output.tmLanguage.json"
+			}
+		]
+	},
+
+
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/valcubeta/vsc-code-runner.git"
+	},
+	"homepage": "https://github.com/valcubeta/vsc-code-runner/blob/master/README.md",
+	"bugs": {
+		"url": "https://github.com/valcubeta/vsc-code-runner/issues",
+		"email": "valcubeta@gmail.com"
+	},
+
+
+	"featureFlags": {
+		"usingNewPythonInterpreterPathApi": true,
+		"usingNewPythonInterpreterPathApiV2": true
+	},
+
+
+	"keywords": [
+		"code",
+		"runner",
+		"python",
+		"ruby",
+		"typescript",
+		"javascript",
+		"php",
+		"go",
+		"dart",
+		"java",
+		"c",
+		"cpp",
+		"cs",
+		"kotlin",
+		"haskell",
+		"powershell",
+		"batch"
+	]
+}
