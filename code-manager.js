@@ -1,11 +1,10 @@
-const fs = require('node:fs')
-const os = require('node:os')
-const pathlib = require('node:path')
 const vscode = require('vscode')
+const { writeFileSync, unlinkSync } = require('node:fs')
+const pathlib = require('node:path')
 const killProcess = require('tree-kill')
-const constants = require('./constants')
 const { Utility } = require('./utility')
-const tmpDir = os.tmpdir()
+
+const { tmpdir, platform } = require('node:os')
 
 class CodeManager {
 	constructor() {
@@ -15,18 +14,18 @@ class CodeManager {
 
 	/**
 	 * @param {string?} languageId
-	 * @param {vscode.Uri?} fileUri
+	 * @param {vscode.Uri?} uri
 	 */
-	run(languageId = null, fileUri = null) {
+	run(languageId = null, uri = null) {
 		function* generator() {
 			if (this.running) {
 				vscode.window.showInformationMessage('Code already running!')
 				return
 			}
 
-			this.runFromExplorer = this.checkIsRunFromExplorer(fileUri)
+			this.runFromExplorer = this.isExporer(uri)
 			if (this.runFromExplorer) {
-				this.document = yield vscode.workspace.openTextDocument(fileUri)
+				this.document = yield vscode.workspace.openTextDocument(uri)
 			} else {
 				const editor = vscode.window.activeTextEditor
 				if (!editor) {
@@ -47,7 +46,7 @@ class CodeManager {
 
 			this.getCodeFileAndExecute(extension, executor)
 		}
-		return awaiter({ thisObj: this, generator })
+		return awaiter({ generator, thisObj: this })
 	}
 
 	stop() {
@@ -76,7 +75,7 @@ class CodeManager {
 			? pathlib.dirname(this.document.fileName)
 			: this.workspaceFolder
 
-		this.cwd ||= tmpDir
+		this.cwd ||= tmpdir()
 	}
 
 	getWorkspaceFolder() {
@@ -118,52 +117,14 @@ class CodeManager {
 		this.executeCommand(executor, appendFile)
 	}
 
-	/**
-	 * @param {vscode.Uri} fileUri File Uri
-	 */
-	checkIsRunFromExplorer(fileUri) {
-		return fileUri?.fsPath !== vscode.window.activeTextEditor?.document.uri.fsPath
+	/** @param {vscode.Uri?} uri */
+	isExplorer(uri) {
+		return uri?.fsPath !== this.document?.uri.fsPath
 	}
 
 	onDidCloseTerminal() {
 		this.terminal = null
 	}
-}
-
-function awaiter({ thisObj, args, generator }) {
-	function adopt(value) {
-		if (value instanceof Promise) {
-			return value
-		}
-		return Promise.resolve(value)
-	}
-
-	
-	return new Promise((resolve, reject) => {
-		function handler({ fulfilled }) {
-			try {
-				if (fulfilled) {
-					step(generator.next(value))
-					return
-				}
-				step(generator.throw(value))
-			} catch (error) {
-				reject(error)
-			}
-		}
-
-		function step(result) {
-			if (result.done) {
-				resolve(result.value)
-				return
-			}
-			adopt(result.value).then(
-				() => handler({ fulfilled: true  }),
-				() => handler({ fulfilled: false })
-			)
-		}
-		step(generator.apply(thisObj, args ?? []).next())
-	})
 }
 
 module.exports = { CodeManager }
