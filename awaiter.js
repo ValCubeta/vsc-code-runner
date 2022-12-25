@@ -1,11 +1,15 @@
-function awaiter({ thisObj, args, generator }) {
-	function adopt(value) {
-		if (value instanceof Promise) {
-			return value
-		}
-		return Promise.resolve(value)
+function adopt(value) {
+	if (value instanceof Promise) {
+		return value
 	}
+	return Promise.resolve(value)
+}
 
+/**
+ * @param {{ generator: Generator, thisObj: ThisType<any>, args: any[] }} param0
+ * @returns {Promise<any>}
+ */
+function awaiter({ generator, thisObj, args }) {
 	return new Promise((resolve, reject) => {
 		function handler({ fulfilled }) {
 			try {

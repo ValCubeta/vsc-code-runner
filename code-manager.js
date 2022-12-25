@@ -24,6 +24,7 @@ class CodeManager {
 			}
 
 			this.runFromExplorer = this.isExporer(uri)
+
 			if (this.runFromExplorer) {
 				this.document = yield vscode.workspace.openTextDocument(uri)
 			} else {
@@ -34,7 +35,17 @@ class CodeManager {
 				}
 				this.document = editor.document
 			}
-			this.initialize()
+
+			this.config = this.getConfiguration('vsc-code-runner', this.document)
+			this.cwd = this.config.get('cwd')
+	
+			this.workspaceFolder = this.getWorkspaceFolder()
+	
+			this.cwd ||= !this.workspaceFolder && this.document?.isUntitled
+				? pathlib.dirname(this.document.fileName)
+				: this.workspaceFolder
+	
+			this.cwd ||= tmpdir()
 
 			const extension = pathlib.extname(this.document.fileName)
 			const executor = this.getExecutor(languageId, extension)
@@ -50,32 +61,11 @@ class CodeManager {
 	}
 
 	stop() {
-		this.stopRunning()
-	}
-
-	dispose() {
-		this.stopRunning()
-	}
-
-	stopRunning() {
 		if (this.running) {
 			this.running = false
 			vscode.commands.executeCommand('setContext', 'vsc-code-runner.running', false)
 			killProcess(this.process.pid)
 		}
-	}
-
-	initialize() {
-		this.config = Utility.getConfiguration('vsc-code-runner', this.document)
-		this.cwd = this.config.get('cwd')
-
-		this.workspaceFolder = this.getWorkspaceFolder()
-
-		this.cwd ||= !this.workspaceFolder && this.document?.isUntitled
-			? pathlib.dirname(this.document.fileName)
-			: this.workspaceFolder
-
-		this.cwd ||= tmpdir()
 	}
 
 	getWorkspaceFolder() {
@@ -96,25 +86,50 @@ class CodeManager {
 		if (activeTextEditor) {
 			selection = activeTextEditor.selection
 		}
+
 		const ignoreSelection = this.config.get('ignoreSelection')
+
 		if ((this.runFromExplorer || selection?.isEmpty || ignoreSelection) && !this.document.isUntitled) {
 			this.isTmp = false
 			this.file = this.document.fileName
-			if (this._config.get('saveFileBeforeRun')) {
-				return this.document.save().then(() => {
-					this.executeCommand(executor, appendFile)
-				})
+			if (this.config.get('saveFileBeforeRun')) {
+				return this.document.save()
+					.then(() => {
+						this.execute(executor, appendFile)
+					})
 			}
 		} else {
-			let text = (this._runFromExplorer || selection?.isEmpty || ignoreSelection)
+			const text = (this.runFromExplorer || selection?.isEmpty || ignoreSelection)
 				? this.document.getText()
 				: this.document.getText(selection)
 			this.isTmp = true
 			const folder = this.document.isUntitled
 				? this.cwd : pathlib.dirname(this.document.fileName)
-			this.createRandomFile(text, folder, extension)
+			this.createFile(text, folder, extension)
 		}
-		this.executeCommand(executor, appendFile)
+		this.execute(executor, appendFile)
+	}
+
+	createRandomFile(content, folder, fileExtension) {
+		let fileType = "";
+		const languageIdToFileExtensionMap = this._config.get("languageIdToFileExtensionMap");
+		if (this._languageId && languageIdToFileExtensionMap[this._languageId]) {
+			fileType = languageIdToFileExtensionMap[this._languageId];
+		}
+		else {
+			if (fileExtension) {
+				fileType = fileExtension;
+			}
+			else {
+				fileType = "." + this._languageId;
+			}
+		}
+		const temporaryFileName = this._config.get("temporaryFileName");
+		const tmpFileNameWithoutExt = temporaryFileName ? temporaryFileName : "temp" + this.rndName();
+		this.fileNameWithoutExt = tmpFileNameWithoutExt;
+		const tmpFileName = tmpFileNameWithoutExt + fileType;
+		this._codeFile = path_1.join(folder, tmpFileName);
+		fs.writeFileSync(this._codeFile, content);
 	}
 
 	/** @param {vscode.Uri?} uri */
@@ -122,7 +137,7 @@ class CodeManager {
 		return uri?.fsPath !== this.document?.uri.fsPath
 	}
 
-	onDidCloseTerminal() {
+	deleteTerminal() {
 		this.terminal = null
 	}
 }
