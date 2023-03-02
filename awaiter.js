@@ -1,9 +1,4 @@
-function adopt(value) {
-	if (value instanceof Promise) {
-		return value
-	}
-	return Promise.resolve(value)
-}
+const adopt = value => value instanceof Promise ? value : Promise.resolve(value)
 
 /**
  * @param {{ generator: Generator, thisObj: ThisType<any>, args: any[] }} param0
